@@ -64,7 +64,7 @@
             <el-col :span="6">
               <div style="display: flex;align-items: start">
                 <el-form-item label="总金额" prop="totalAmount">
-                  <el-input-number style="width:100%" v-model="form.totalAmount" :precision="2" :min="0"></el-input-number>
+                  <el-input-number style="width:100%" v-model="form.totalAmount" :precision="2" :min="0" :controls="false"></el-input-number>
                 </el-form-item>
                 <el-button link type="primary" @click="handleAutoCalc" style="line-height: 32px">自动计算</el-button>
               </div>
@@ -134,6 +134,7 @@
                   :precision="2"
                   :min="0"
                   :max="2147483647"
+                  @change="handleAutoCalc"
                 ></el-input-number>
               </template>
             </el-table-column>
@@ -242,17 +243,21 @@ const handleOkClick = (item) => {
   selectedSku.value = [...item]
   item.forEach((it) => {
     if (!form.value.details.find(detail => detail.itemSku.id === it.id)) {
+      const costPrice = it.itemSku.costPrice || 0
+      const quantity = it.quantity || 1
       form.value.details.push(
         {
           itemSku: it.itemSku,
           item: it.item,
-          amount: undefined,
-          quantity: it.quantity,
+          costPrice: costPrice,
+          amount: quantity * costPrice,
+          quantity: quantity,
           warehouseId: form.value.warehouseId
         }
       )
     }
   })
+  handleAutoCalc()
 }
 // 选择商品 end
 
@@ -396,23 +401,22 @@ const loadDetail = (id) => {
 }
 
 const handleChangeQuantity = () => {
-  let sum = 0
+  let totalQuantity = 0
   form.value.details.forEach(it => {
     if (it.quantity) {
-      sum += Number(it.quantity)
+      totalQuantity += Number(it.quantity)
+      it.amount = Number(it.quantity) * (Number(it.costPrice) || 0)
     }
   })
-  form.value.totalQuantity = sum
+  form.value.totalQuantity = totalQuantity
+  handleAutoCalc()
 }
 
 const handleAutoCalc = () => {
-  let sum = undefined
+  let sum = 0
   form.value.details.forEach(it => {
-    if (it.amount >= 0) {
-      if (!sum) {
-        sum = 0
-      }
-      sum = numSub(sum, -Number(it.amount))
+    if (it.amount) {
+      sum += Number(it.amount)
     }
   })
   form.value.totalAmount = sum
